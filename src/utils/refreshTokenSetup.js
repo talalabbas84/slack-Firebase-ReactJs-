@@ -1,6 +1,6 @@
 import React from 'react';
-import { service } from '../component/services/services';
-import { Store } from '../component/services/store';
+import { service } from '../container/services/services';
+import { Store } from '../container/services/store';
 
 export const refreshTokenSetup = res => {
   // console.log(JSON.parse(res));

@@ -1,37 +1,61 @@
 import './App.css';
 
-import React, { Fragment, useEffect } from 'react';
-import { BrowserRouter as Router, Route, Switch } from 'react-router-dom';
+import React, { Fragment, useEffect, useState } from 'react';
+import {
+  BrowserRouter as Router,
+  Route,
+  Switch,
+  withRouter,
+  useHistory
+} from 'react-router-dom';
+import { connect } from 'react-redux';
+import firebase from 'firebase';
 import axios from 'axios';
-import LoginHook from './component/login';
-import Home from './component/home';
+import LoginHook from './container/login';
+import Home from './container/homeFirebase/Home';
 import setAuthToken from './utils/setAuthToken';
-import PrivateRoute from './component/routing/PrivateRoutes';
-import { Store } from './component/services/store';
+import PrivateRoute from './container/routing/PrivateRoutes';
+import { Store } from './container/services/store';
 import { refreshTokenSetup } from './utils/refreshTokenSetup';
-import { service } from './component/services/services';
+import { service } from './container/services/services';
+import Login from './component/Auth/Login';
+import Register from './component/Auth/Register';
 
-if (localStorage.token) {
-  setAuthToken(localStorage.token);
-}
+import { clearUser, setUser } from './store/actions';
+import Spinner from './component/Spinner.js/Spinner';
 
-const App = () => {
+// if (localStorage.token) {
+//   setAuthToken(localStorage.token);
+// }
+
+const App = ({ history, setUser, clearUser, isLoading }) => {
+  console.log(isLoading, 'isloading');
+  // const history = useHistory();
   useEffect(() => {
-    getUser();
+    // getUser();
+    firebase.auth().onAuthStateChanged(user => {
+      if (user) {
+        setUser(user);
+        history.push('/');
+      } else {
+        history.push('/login');
+        clearUser();
+      }
+    });
   }, []);
   const getUser = async () => {
     const tokenId = Store.getTokenData();
 
-    service
-      .login(tokenId && tokenId.tokenId)
-      .then(res => {
-        Store.setUser(res.data.user);
-        Store.set('isAuthenticated', res.data.status);
-      })
-      .catch(err => {
-        Store.setUser({});
-        Store.set('isAuthenticated', false);
-      });
+    // service
+    //   .login(tokenId && tokenId.tokenId)
+    //   .then(res => {
+    //     Store.setUser(res.data.user);
+    //     Store.set('isAuthenticated', res.data.status);
+    //   })
+    //   .catch(err => {
+    //     Store.setUser({});
+    //     Store.set('isAuthenticated', false);
+    //   });
     // refreshTokenSetup(tokenData);
     // const TokenId = Store.setUserToken(res.tokenId);
     // service
@@ -42,21 +66,28 @@ const App = () => {
     //   })
     //   .catch(err => console.log(err));
   };
-  return (
-    <Router>
-      <Fragment>
-        <Switch>
-          <Route exact path='/login' component={LoginHook} />
-          <PrivateRoute
-            exact
-            path='/'
-            isAuthenticated={Store.get('isAuthenticated')}
-            component={Home}
-          />
-        </Switch>
-      </Fragment>
-    </Router>
+  return !isLoading ? (
+    <Fragment>
+      <Switch>
+        <Route exact path='/login' component={Login} />
+        <Route exact path='/register' component={Register} />
+        <Route exact path='/' component={Home} />
+        {/* <PrivateRoute
+          exact
+          path='/'
+          isAuthenticated={Store.get('isAuthenticated')}
+          component={Home}
+        /> */}
+      </Switch>
+    </Fragment>
+  ) : (
+    <Spinner />
   );
 };
+const mapStateToProps = state => ({
+  isLoading: state.user.isLoading
+});
 
-export default App;
+export default withRouter(
+  connect(mapStateToProps, { setUser, clearUser })(App)
+);
